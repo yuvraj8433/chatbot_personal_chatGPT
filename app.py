@@ -31,18 +31,39 @@ def save_memory(user_id, messages):
 # -------- AI CHAT ----------
 def ask_ai(user_id, text):
     messages = load_memory(user_id)
-    messages.append({"role":"user","content":text})
+    messages.append({"role": "user", "content": text})
 
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={"Authorization": f"Bearer {API_KEY}"},
-        json={"model": MODEL, "messages": messages}
-    ).json()
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://nexa-ai.onrender.com",  # required
+                "X-Title": "Nexa AI"  # required
+            },
+            json={
+                "model": MODEL,
+                "messages": messages,
+                "temperature": 0.2,
+                "max_tokens": 800
+            }
+        )
 
-    reply = response["choices"][0]["message"]["content"]
-    messages.append({"role":"assistant","content":reply})
+        print("OpenRouter raw:", response.text)  # debug log
+
+        result = response.json()
+        reply = result["choices"][0]["message"]["content"]
+
+    except Exception as e:
+        print("OPENROUTER ERROR:", e)
+        reply = "AI server error. Please try again."
+
+    messages.append({"role": "assistant", "content": reply})
     save_memory(user_id, messages)
+
     return reply
+
 
 # -------- API ROUTE ----------
 @app.route("/chat", methods=["POST"])
